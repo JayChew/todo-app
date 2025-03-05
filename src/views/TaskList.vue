@@ -19,11 +19,13 @@ const fetchTasks = async () => {
   }
 };
 
-const subscribeToTaskUpdates = (userId) => {
-  return echo.private(`tasks.${userId}`).listen("TaskUpdated", ({ task }) => {
-    const index = tasks.value.findIndex((t) => t.id === task.id);
-    index !== -1 ? (tasks.value[index] = task) : tasks.value.push(task);
-  });
+const subscribeToTaskListUpdates = (userId) => {
+  return echo
+    .private(`tasks.${userId}`)
+    .listen("TaskListUpdated", ({ task }) => {
+      const index = tasks.value.findIndex((t) => t.id === task.id);
+      index !== -1 ? (tasks.value[index] = task) : tasks.value.push(task);
+    });
 };
 
 let taskChannel = null;
@@ -35,7 +37,7 @@ watch(
     }
     if (newUser) {
       await fetchTasks();
-      taskChannel = subscribeToTaskUpdates(newUser.id);
+      taskChannel = subscribeToTaskListUpdates(newUser.id);
     }
   },
   { immediate: true }
