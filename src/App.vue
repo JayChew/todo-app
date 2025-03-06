@@ -9,6 +9,7 @@ const router = useRouter();
 // 页面加载时检查用户是否已登录
 onMounted(async () => {
   await authStore.fetchUser();
+
   if (!authStore.user) {
     router.push("/login");
   }

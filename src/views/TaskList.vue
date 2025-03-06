@@ -1,26 +1,23 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
-import axios from "axios";
-import echo from "../utils/echo";
+import { apiClient } from "../api";
+import echoInstance from "../utils/echo";
 import { useAuthStore } from "../stores/authStore";
 
 const tasks = ref([]);
 const authStore = useAuthStore();
+authStore.fetchToken();
 
 const fetchTasks = async () => {
   if (!authStore.user) return;
   try {
-    const { data } = await axios.get("/tasks", {
-      headers: { Authorization: `Bearer ${authStore.token}` },
-    });
+    const { data } = await apiClient.get("/tasks");
     tasks.value = data.data;
-  } catch (error) {
-    console.error("获取任务失败:", error);
-  }
+  } catch (error) {}
 };
 
 const subscribeToTaskListUpdates = (userId) => {
-  return echo
+  return echoInstance(authStore.token)
     .private(`tasks.${userId}`)
     .listen("TaskListUpdated", ({ task }) => {
       const index = tasks.value.findIndex((t) => t.id === task.id);
@@ -33,7 +30,7 @@ watch(
   () => authStore.user,
   async (newUser, oldUser) => {
     if (taskChannel) {
-      taskChannel.stop(); // Unsubscribe from previous channel
+      echoInstance(authStore.token).leave(`tasks.${authStore.user.id}`);
     }
     if (newUser) {
       await fetchTasks();
@@ -45,7 +42,7 @@ watch(
 
 onUnmounted(() => {
   if (taskChannel) {
-    taskChannel.stop();
+    echoInstance(authStore.token).leave(`tasks.${authStore.user.id}`);
   }
 });
 </script>
