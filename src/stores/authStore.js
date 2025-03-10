@@ -1,42 +1,58 @@
 import { defineStore } from "pinia";
-import { apiClient, csrfClient } from "../api";
-sessionStorage
-export const useAuthStore = defineStore("auth", {
-  state: () => ({ user: null, token: sessionStorage.getItem("token") || "" }),
-  actions: {
-    async login(email, password) {
-      await csrfClient.get('/sanctum/csrf-cookie');
-      const response = await apiClient.post("/login", { email, password });
-      const { user, token } = response.data;
-      sessionStorage.setItem('token', token);
-      this.user = user;
-      this.token = token;
-    },
-    async fetchToken() {
-      if (!this.token) { // Check if token is empty
-        const response = await apiClient.get("/auth/token");
-        this.token = response.data.token;
-        sessionStorage.setItem("token", this.token); // Store in sessionStorage
-      }
-    },
-    async fetchUser() {
-      try {
-        const response = await apiClient.get("/user");
-        this.user = response.data;
-      } catch (_) {
-        this.user = null;
-      }
-    },
-    async initializeAuth() {
-      if (!this.token) {
-        await this.fetchToken();
-      }
-      await this.fetchUser();
-    },
-    async logout(router) {
-      await apiClient.post("/logout");
-      this.user = null;
-      router.push("/login");
-    },
+
+export const useAuthStore = defineStore("authStore", {
+  state: () => {
+    return {
+      user: null,
+      token: `Bearer ${localStorage.getItem("token")}` || null,
+      errors: {},
+    };
   },
-});
+  actions: {
+    async fetchUser() {
+      if (this.token) {
+        const res = await fetch("/api/v1/user", {
+          headers: {
+            authorization: `Bearer ${this.token}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.user = data;
+        }
+      }
+    },
+    async authenticate(apiRoute, formData) {
+      const res = await fetch(`/api/v1/${apiRoute}`, {
+        method: "post",
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (data.errors) {
+        this.errors = data.errors;
+      } else {
+        this.errors = {};
+        localStorage.setItem("token", data.token);
+        this.user = data.user;
+      }
+    },
+    async logout() {
+      const res = await fetch("/api/v1/logout", {
+        method: "post",
+        headers: {
+          authorization: `Bearer ${this.token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        this.user = null;
+        this.errors = {};
+        localStorage.removeItem("token");
+        this.router.push("/login");
+      }
+    }
+  }
+})
