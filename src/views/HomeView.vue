@@ -1,14 +1,40 @@
 <script setup>
+import echoInstance from "@/utils/echo";
 import { useTasksStore } from "@/stores/tasks";
-import { onMounted, ref } from "vue";
+import { useAuthStore } from "@/stores/auth"; // Assuming you have an auth store
+import { onMounted, ref, watchEffect } from "vue";
 import { RouterLink } from "vue-router";
 
 const tasksStore = useTasksStore();
+const authStore = useAuthStore(); // Access authentication state
 const tasks = ref([]);
 
-onMounted(async () => {
-  tasks.value = await tasksStore.getAllTasks();
-  console.log(tasks);
+const subscribeToTaskListUpdates = () => {
+  if (authStore.user) {
+    return echoInstance(authStore.token)
+      .private(`tasks.${authStore.user.id}`)
+      .listen("TaskListUpdated", ({ task }) => {
+        const index = tasks.value.findIndex((t) => t.id === task.id);
+        index !== -1 ? (tasks.value[index] = task) : tasks.value.push(task);
+      });
+  }
+};
+
+const fetchTasks = async () => {
+  tasks.value = [];
+  if (authStore.user) {
+    // Only fetch tasks if user is logged in
+    tasks.value = await tasksStore.getAllTasks();
+  }
+};
+
+// Fetch tasks when component mounts
+onMounted(fetchTasks);
+
+// Watch for authentication changes and update tasks accordingly
+watchEffect(() => {
+  fetchTasks();
+  subscribeToTaskListUpdates();
 });
 </script>
 
@@ -16,7 +42,7 @@ onMounted(async () => {
   <main>
     <h1 class="title">Latest Tasks</h1>
 
-    <div v-if="tasks.length > 0">
+    <div v-if="tasks && tasks.length > 0">
       <div
         v-for="task in tasks"
         :key="task.id"

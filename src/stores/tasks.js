@@ -5,14 +5,17 @@ export const useTasksStore = defineStore("tasksStore", {
   state: () => {
     return {
       errors: {},
+      authStore: useAuthStore(), // Define authStore once
     };
   },
   actions: {
     /******************* Get all tasks *******************/
     async getAllTasks() {
+      if (!this.authStore.token) { return; }
+
       const res = await fetch("/api/v1/tasks", {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${this.authStore.token}`,
         }
       });
       const data = await res.json();
@@ -20,42 +23,45 @@ export const useTasksStore = defineStore("tasksStore", {
     },
     /******************* Get a task *******************/
     async getTask(task) {
-      const res = await fetch(`/api/v1/tasks/${task}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        }
-      });
-      const data = await res.json();
+      if (this.authStore.token) {
+        const res = await fetch(`/api/v1/tasks/${task}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          }
+        });
+        const data = await res.json();
 
-      return data.task;
+        return data.task;
+      }
     },
     /******************* Create a task *******************/
     async createTaks(formData) {
-      const res = await fetch("/api/v1/tasks", {
-        method: "post",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(formData),
-      });
+      if (this.authStore.token) {
+        const res = await fetch("/api/v1/tasks", {
+          method: "post",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(formData),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (data.errors) {
-        this.errors = data.errors;
-      } else {
-        this.router.push({ name: "home" });
-        this.errors = {}
+        if (data.errors) {
+          this.errors = data.errors;
+        } else {
+          this.router.push({ name: "home" });
+          this.errors = {}
+        }
       }
     },
     /******************* Delete a task *******************/
     async deleteTask(task) {
-      const authStore = useAuthStore();
-      if (authStore.user.id === task.user_id) {
+      if (this.authStore.user.id === task.user_id) {
         const res = await fetch(`/api/v1/tasks/${task.id}`, {
           method: "delete",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${this.authStore.token}`,
           },
         });
 
@@ -68,12 +74,11 @@ export const useTasksStore = defineStore("tasksStore", {
     },
     /******************* Update a task *******************/
     async updateTask(task, formData) {
-      const authStore = useAuthStore();
-      if (authStore.user.id === task.user_id) {
+      if (this.authStore.user.id === task.user_id) {
         const res = await fetch(`/api/v1/tasks/${task.id}`, {
           method: "put",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${this.authStore.token}`,
           },
           body: JSON.stringify(formData),
         });

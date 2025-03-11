@@ -1,18 +1,20 @@
 import { defineStore } from "pinia";
+import { getCsrfToken } from "@/utils/csrfToken"; // Adjust path based on your project structure
 
 export const useAuthStore = defineStore("authStore", {
   state: () => {
     return {
       user: null,
       errors: {},
+      token: localStorage.getItem("token") || null
     };
   },
   actions: {
     async getUser() {
-      if (localStorage.getItem("token")) {
+      if (this.token) {
         const res = await fetch("/api/v1/user", {
           headers: {
-            authorization: `Bearer ${localStorage.getItem("token")}`,
+            authorization: `Bearer ${this.token}`,
           },
         });
         const data = await res.json();
@@ -22,18 +24,13 @@ export const useAuthStore = defineStore("authStore", {
       }
     },
     async authenticate(apiRoute, formData) {
-      const xsrfToken = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("XSRF-TOKEN="))
-        ?.split("=")[1];
-
       const res = await fetch(`/api/v1/${apiRoute}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-XSRF-TOKEN": decodeURIComponent(xsrfToken), // Decode to ensure proper usage
+          "X-XSRF-TOKEN": decodeURIComponent(getCsrfToken()),
         },
-        credentials: "include", // Ensures cookies are sent with the request
+        credentials: "include",
         body: JSON.stringify(formData),
       });
 
@@ -42,6 +39,7 @@ export const useAuthStore = defineStore("authStore", {
         this.errors = data.errors;
       } else {
         this.errors = {};
+        this.token = data.token;
         localStorage.setItem("token", data.token);
         this.user = data.user;
         this.router.push({ name: "home" });
@@ -51,12 +49,12 @@ export const useAuthStore = defineStore("authStore", {
       const res = await fetch("/api/v1/logout", {
         method: "post",
         headers: {
-          authorization: `Bearer ${localStorage.getItem("token")}`,
+          authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/json",
+          "X-XSRF-TOKEN": decodeURIComponent(getCsrfToken()),
         },
+        credentials: "include"
       });
-
-      const data = await res.json();
-      console.log(data);
 
       if (res.ok) {
         this.user = null;

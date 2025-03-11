@@ -16,7 +16,7 @@ onMounted(() => (errors.value = {}));
 
 <template>
   <main>
-    <h1 class="title">Login to your account</h1>
+    <h2 class="title">Login to your account</h2>
 
     <form
       @submit.prevent="authenticate('login', formData)"
