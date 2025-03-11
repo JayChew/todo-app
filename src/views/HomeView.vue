@@ -1,12 +1,12 @@
 <script setup>
 import echoInstance from "@/utils/echo";
 import { useTasksStore } from "@/stores/tasks";
-import { useAuthStore } from "@/stores/auth"; // Assuming you have an auth store
+import { useAuthStore } from "@/stores/auth";
 import { onMounted, ref, watchEffect } from "vue";
 import { RouterLink } from "vue-router";
 
 const tasksStore = useTasksStore();
-const authStore = useAuthStore(); // Access authentication state
+const authStore = useAuthStore();
 const tasks = ref([]);
 
 const subscribeToTaskListUpdates = () => {
@@ -27,9 +27,6 @@ const fetchTasks = async () => {
     tasks.value = await tasksStore.getAllTasks();
   }
 };
-
-// Fetch tasks when component mounts
-onMounted(fetchTasks);
 
 // Watch for authentication changes and update tasks accordingly
 watchEffect(() => {

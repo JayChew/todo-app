@@ -9,7 +9,7 @@ const echoInstance = (bearerToken) => {
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true,
-    authEndpoint: `${import.meta.env.VITE_API_BASE_URL}/broadcasting/auth`, // Use configured base URL
+    authEndpoint: `${import.meta.env.VITE_BACKEND_BASE_URL}api/v1/broadcasting/auth`, // Use configured base URL
     auth: {
       withCredentials: true,
       headers: {

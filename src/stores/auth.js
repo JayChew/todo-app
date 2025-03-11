@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { getCsrfToken } from "@/utils/csrfToken"; // Adjust path based on your project structure
+import apiClient from "@/api/axios";
 
 export const useAuthStore = defineStore("authStore", {
   state: () => {
@@ -11,56 +11,38 @@ export const useAuthStore = defineStore("authStore", {
   },
   actions: {
     async getUser() {
-      if (this.token) {
-        const res = await fetch("/api/v1/user", {
-          headers: {
-            authorization: `Bearer ${this.token}`,
-          },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          this.user = data;
-        }
+      try {
+        const response = await apiClient.get("/api/v1/user");
+        this.user = response.data;
+      } catch (error) {
+        console.error("Error fetching user:", error);
       }
     },
     async authenticate(apiRoute, formData) {
-      const res = await fetch(`/api/v1/${apiRoute}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-XSRF-TOKEN": decodeURIComponent(getCsrfToken()),
-        },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
+      await apiClient.get("sanctum/csrf-cookie");
 
-      const data = await res.json();
-      if (data.errors) {
-        this.errors = data.errors;
-      } else {
+      try {
+        const response = await apiClient.post(`/api/v1/${apiRoute}`, JSON.stringify(formData));
+        const data = response.data;
         this.errors = {};
         this.token = data.token;
         localStorage.setItem("token", data.token);
         this.user = data.user;
         this.router.push({ name: "home" });
+      } catch (error) {
+        this.errors = error.response?.data.errors || {};
+        console.log(this.errors);
       }
     },
     async logout() {
-      const res = await fetch("/api/v1/logout", {
-        method: "post",
-        headers: {
-          authorization: `Bearer ${this.token}`,
-          "Content-Type": "application/json",
-          "X-XSRF-TOKEN": decodeURIComponent(getCsrfToken()),
-        },
-        credentials: "include"
-      });
-
-      if (res.ok) {
+      try {
+        const response = await apiClient.post("/api/v1/logout");
         this.user = null;
         this.errors = {};
         localStorage.removeItem("token");
         this.router.push({ name: "home" });
+      } catch (error) {
+
       }
     },
   },

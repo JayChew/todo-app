@@ -1,95 +1,81 @@
 import { defineStore } from "pinia";
 import { useAuthStore } from "./auth";
+import apiClient from "@/api/axios";
+import { useRouter } from "vue-router";
 
 export const useTasksStore = defineStore("tasksStore", {
-  state: () => {
-    return {
-      errors: {},
-      authStore: useAuthStore(), // Define authStore once
-    };
+  state: () => ({
+    errors: {},
+  }),
+  getters: {
+    authStore: () => useAuthStore(), // Use a getter to access the auth store
   },
   actions: {
     /******************* Get all tasks *******************/
     async getAllTasks() {
-      if (!this.authStore.token) { return; }
+      if (!this.authStore.token) return;
 
-      const res = await fetch("/api/v1/tasks", {
-        headers: {
-          Authorization: `Bearer ${this.authStore.token}`,
-        }
-      });
-      const data = await res.json();
-      return data.data;
+      try {
+        const response = await apiClient.get("/api/v1/tasks");
+        return response.data.data;
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        this.errors = error.response?.data || {};
+      }
     },
+
     /******************* Get a task *******************/
-    async getTask(task) {
-      if (this.authStore.token) {
-        const res = await fetch(`/api/v1/tasks/${task}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          }
-        });
-        const data = await res.json();
+    async getTask(task_id) {
+      if (!this.authStore.token) return;
 
-        return data.task;
+      try {
+        const response = await apiClient.get(`/api/v1/tasks/${task_id}`);
+        return response.data.task;
+      } catch (error) {
+        console.error("Error fetching task:", error);
+        this.errors = error.response?.data || {};
       }
     },
+
     /******************* Create a task *******************/
-    async createTaks(formData) {
-      if (this.authStore.token) {
-        const res = await fetch("/api/v1/tasks", {
-          method: "post",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(formData),
+    async createTask(formData) {
+      if (!this.authStore.token) return;
+
+      try {
+        const response = await apiClient.post("/api/v1/tasks/", JSON.stringify(formData), {
+          headers: { "Content-Type": "application/json" },
         });
-
-        const data = await res.json();
-
-        if (data.errors) {
-          this.errors = data.errors;
-        } else {
-          this.router.push({ name: "home" });
-          this.errors = {}
-        }
+        return response.data;
+      } catch (error) {
+        console.error("Error creating task:", error);
+        this.errors = error.response?.data || {};
       }
     },
+
     /******************* Delete a task *******************/
     async deleteTask(task) {
-      if (this.authStore.user.id === task.user_id) {
-        const res = await fetch(`/api/v1/tasks/${task.id}`, {
-          method: "delete",
-          headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
-          },
-        });
+      if (this.authStore.user?.id !== task.user_id) return;
 
-        const data = await res.json();
-        if (res.ok) {
-          this.router.push({ name: "home" });
-        }
-        console.log(data);
+      try {
+        await apiClient.delete(`/api/v1/tasks/${task.id}`);
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        this.errors = error.response?.data || {};
       }
     },
+
     /******************* Update a task *******************/
     async updateTask(task, formData) {
-      if (this.authStore.user.id === task.user_id) {
-        const res = await fetch(`/api/v1/tasks/${task.id}`, {
-          method: "put",
-          headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
-          },
-          body: JSON.stringify(formData),
-        });
+      if (this.authStore.user?.id !== task.user_id) return;
 
-        const data = await res.json();
-        if (data.errors) {
-          this.errors = data.errors;
-        } else {
-          this.router.push({ name: "home" });
-          this.errors = {}
-        }
+      try {
+        const response = await apiClient.put(`/api/v1/tasks/${task.id}`, JSON.stringify(formData), {
+          headers: { "Content-Type": "application/json" },
+        });
+        return response.data;
+      } catch (error) {
+        console.error("Error updating task:", error);
+        this.errors = error.response?.data || {};
       }
     },
   },
