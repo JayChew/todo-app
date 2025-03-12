@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import { useAuthStore } from "@/stores/auth";
 
 window.Pusher = Pusher;
 
@@ -19,4 +20,14 @@ const echoInstance = (bearerToken) => {
   });
 }
 
-export default echoInstance;
+export const subscribeToTaskListUpdates = () => {
+  const authStore = useAuthStore();
+  if (authStore.user) {
+    return echoInstance(authStore.token)
+      .private(`tasks.${authStore.user.id}`)
+      .listen("TaskListUpdated", ({ task }) => {
+        const index = tasks.value.findIndex((t) => t.id === task.id);
+        index !== -1 ? (tasks.value[index] = task) : tasks.value.push(task);
+      });
+  }
+};

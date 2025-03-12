@@ -1,31 +1,15 @@
 <script setup>
-import echoInstance from "@/utils/echo";
+import { subscribeToTaskListUpdates } from "@/utils/echo";
 import { useTasksStore } from "@/stores/tasks";
-import { useAuthStore } from "@/stores/auth";
 import { onMounted, ref, watchEffect } from "vue";
 import { RouterLink } from "vue-router";
 
 const tasksStore = useTasksStore();
-const authStore = useAuthStore();
 const tasks = ref([]);
-
-const subscribeToTaskListUpdates = () => {
-  if (authStore.user) {
-    return echoInstance(authStore.token)
-      .private(`tasks.${authStore.user.id}`)
-      .listen("TaskListUpdated", ({ task }) => {
-        const index = tasks.value.findIndex((t) => t.id === task.id);
-        index !== -1 ? (tasks.value[index] = task) : tasks.value.push(task);
-      });
-  }
-};
 
 const fetchTasks = async () => {
   tasks.value = [];
-  if (authStore.user) {
-    // Only fetch tasks if user is logged in
-    tasks.value = await tasksStore.getAllTasks();
-  }
+  tasks.value = await tasksStore.getAllTasks();
 };
 
 // Watch for authentication changes and update tasks accordingly

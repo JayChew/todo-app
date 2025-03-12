@@ -15,7 +15,7 @@ export const useAuthStore = defineStore("authStore", {
         const response = await apiClient.get("/api/v1/user");
         this.user = response.data;
       } catch (error) {
-        console.error("Error fetching user:", error);
+        this.errors = error.response?.data
       }
     },
     async authenticate(apiRoute, formData) {
@@ -31,7 +31,6 @@ export const useAuthStore = defineStore("authStore", {
         this.router.push({ name: "home" });
       } catch (error) {
         this.errors = error.response?.data.errors || {};
-        console.log(this.errors);
       }
     },
     async logout() {
